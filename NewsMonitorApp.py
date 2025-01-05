@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify, abort
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
@@ -11,6 +11,7 @@ NEWS_API_KEY = os.getenv('NEWS_API_KEY')  # News API key
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')  # SendGrid API key
 SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Verified sender email in SendGrid
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')  # Alias or recipient email address
+MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')  # Custom API key for security
 
 # Categories to pull
 CATEGORIES = {
@@ -26,6 +27,11 @@ CATEGORIES = {
 # Route to trigger email
 @app.route('/', methods=['GET'])
 def fetch_and_send_news():
+    # Check for API key in headers
+    api_key = request.headers.get('X-API-KEY')
+    if api_key != MY_SECRET_API_KEY:
+        abort(403)  # Forbidden if the API key is incorrect
+
     news_data = {}
 
     for label, category in CATEGORIES.items():
