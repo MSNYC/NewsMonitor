@@ -79,15 +79,18 @@ def format_email_content(news_data):
 
 def send_email(subject, content):
     """Send email using SendGrid."""
+    sender_email = os.getenv('RECIPIENT_EMAIL')  # Use the recipient email as the sender email
+    recipient_email = os.getenv('RECIPIENT_EMAIL')  # Reuse for sending to yourself
+
     message = Mail(
-        from_email='your-verified-email@example.com',  # Must be verified in SendGrid
-        to_emails=RECIPIENT_EMAIL,
+        from_email=sender_email,  # Sender email (must be verified in SendGrid)
+        to_emails=recipient_email,
         subject=subject,
         html_content=content
     )
 
     try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
         response = sg.send(message)
         print(f"Email sent! Status code: {response.status_code}")
     except Exception as e:
