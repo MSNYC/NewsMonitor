@@ -13,12 +13,13 @@ RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 
 # Categories to pull
 CATEGORIES = {
-    "world": "general",
-    "health": "health",
-    "technology": "technology",
-    "artificial intelligence": "artificial intelligence",
     "oncology": "cancer",
-    "science": "science"
+    "world": "general",
+    "international": "general",  # Added to include both keywords
+    "health": "health",
+    "science": "science",
+    "technology": "technology",
+    "artificial intelligence": "artificial intelligence"
 }
 
 # Route to trigger email
@@ -28,25 +29,27 @@ def fetch_and_send_news():
 
     for label, category in CATEGORIES.items():
         if category == "artificial intelligence" or category == "cancer":
-            # For custom queries like "AI" or "cancer", use "everything" endpoint
+            # For specific queries like "AI" or "cancer", use the "everything" endpoint
             url = f"https://newsapi.org/v2/everything?q={category}&apiKey={NEWS_API_KEY}"
         else:
-            # For general categories, use "top-headlines" endpoint
+            # For general categories, use the "top-headlines" endpoint
             url = f"https://newsapi.org/v2/top-headlines?category={category}&country=us&apiKey={NEWS_API_KEY}"
 
         response = requests.get(url)
+        print(f"Fetching {label} news: Status code {response.status_code}")
         if response.status_code == 200:
             data = response.json()
             news_data[label] = [
                 {
-                    "title": article["title"],
-                    "source": article["source"]["name"],
-                    "published_at": article["publishedAt"],
-                    "url": article["url"]
+                    "title": article.get("title"),
+                    "source": article["source"].get("name"),
+                    "published_at": article.get("publishedAt"),
+                    "url": article.get("url")
                 }
                 for article in data.get("articles", [])[:5]  # Get top 5 articles per category
             ]
         else:
+            print(f"Error fetching {label} news: {response.text}")
             news_data[label] = []
 
     # Format email content
@@ -79,8 +82,8 @@ def format_email_content(news_data):
 
 def send_email(subject, content):
     """Send email using SendGrid."""
-    sender_email = os.getenv('RECIPIENT_EMAIL')  # Use the recipient email as the sender email
-    recipient_email = os.getenv('RECIPIENT_EMAIL')  # Reuse for sending to yourself
+    sender_email = RECIPIENT_EMAIL  # Use the recipient email as the sender email
+    recipient_email = RECIPIENT_EMAIL  # Reuse for sending to yourself
 
     message = Mail(
         from_email=sender_email,  # Sender email (must be verified in SendGrid)
@@ -90,9 +93,10 @@ def send_email(subject, content):
     )
 
     try:
-        sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
         print(f"Email sent! Status code: {response.status_code}")
+        print(f"Response body: {response.body}")
     except Exception as e:
         print(f"Error sending email: {e}")
 
