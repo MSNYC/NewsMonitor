@@ -22,7 +22,7 @@ CATEGORIES = {
 }
 
 # Route to trigger email
-@app.route('/trigger-top-news', methods=['GET'])
+@app.route('/', methods=['GET'])
 def fetch_and_send_news():
     news_data = {}
 
