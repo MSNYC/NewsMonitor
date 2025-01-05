@@ -3,6 +3,7 @@ import requests
 from flask import Flask, request, jsonify, abort
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -13,15 +14,14 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Verified sender email in SendGrid
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')  # Alias or recipient email address
 MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')  # Custom API key for security
 
-# Categories to pull
+# Categories with multiple keywords
 CATEGORIES = {
-    "oncology": "cancer",
-    "world": "general",
-    "international": "general",
-    "health": "health",
-    "science": "science",
-    "technology": "technology",
-    "artificial intelligence": "artificial intelligence"
+    "world news": ["world", "international"],
+    "oncology news": ["oncology", "cancer", "cancer research"],
+    "health news": ["health", "wellness", "public health"],
+    "science news": ["science", "space", "scientific discovery"],
+    "technology news": ["technology", "tech industry", "gadgets"],
+    "artificial intelligence news": ["AI", "artificial intelligence", "machine learning"]
 }
 
 # Route to trigger email
@@ -34,17 +34,26 @@ def fetch_and_send_news():
 
     news_data = {}
 
-    for label, category in CATEGORIES.items():
-        if category == "artificial intelligence" or category == "cancer":
-            # For specific queries like "AI" or "cancer", use the "everything" endpoint
-            url = f"https://newsapi.org/v2/everything?q={category}&apiKey={NEWS_API_KEY}"
-        else:
-            # For general categories, use the "top-headlines" endpoint
-            url = f"https://newsapi.org/v2/top-headlines?category={category}&country=us&apiKey={NEWS_API_KEY}"
+    # Current time and 12 hours ago
+    now = datetime.utcnow()
+    twelve_hours_ago = now - timedelta(hours=12)
 
+    # Fetch news for each category
+    for label, keywords in CATEGORIES.items():
+        # Combine keywords into a single query string
+        query_string = " OR ".join(keywords)
+        url = (f"https://newsapi.org/v2/everything?"
+               f"q={query_string}&"
+               f"from={twelve_hours_ago.strftime('%Y-%m-%dT%H:%M:%S')}&"
+               f"to={now.strftime('%Y-%m-%dT%H:%M:%S')}&"
+               f"sortBy=popularity&"
+               f"apiKey={NEWS_API_KEY}")
+
+        # Make the request to News API
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
+            articles = data.get("articles", [])
             news_data[label] = [
                 {
                     "title": article.get("title"),
@@ -52,7 +61,7 @@ def fetch_and_send_news():
                     "published_at": article.get("publishedAt"),
                     "url": article.get("url")
                 }
-                for article in data.get("articles", [])[:5]  # Get top 5 articles per category
+                for article in articles[:15]  # Get top 15 popular articles
             ]
         else:
             news_data[label] = []
