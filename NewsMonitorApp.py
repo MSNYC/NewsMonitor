@@ -4,44 +4,43 @@ from flask import Flask, request, jsonify, abort
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 app = Flask(__name__)
 
 # Environment variables
-NEWS_API_KEY = os.getenv('NEWS_API_KEY')  # News API key
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')  # SendGrid API key
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Verified sender email in SendGrid
-RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')  # Alias or recipient email address
-MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')  # Custom API key for security
+NEWS_API_KEY = os.getenv('NEWS_API_KEY')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
+MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
-# Categories with multiple keywords
+# Refined categories and keywords
 CATEGORIES = {
-    "world news": ["world", "international"],
-    "oncology news": ["oncology", "cancer", "cancer research"],
-    "health news": ["health", "wellness", "public health"],
-    "science news": ["science", "space", "scientific discovery"],
-    "technology news": ["technology", "tech industry", "gadgets"],
-    "artificial intelligence news": ["AI", "artificial intelligence", "machine learning"]
+    "world news": ["world", "international", "global affairs", "geopolitics"],
+    "oncology news": ["oncology", "cancer", "immunotherapy", "cancer treatment"],
+    "health news": ["health", "public health", "health policy", "medical breakthroughs"],
+    "science news": ["science", "space exploration", "scientific discovery", "research"],
+    "technology news": ["technology", "tech news", "gadgets", "cybersecurity"],
+    "artificial intelligence news": ["artificial intelligence", "machine learning", "AI research", "deep learning"]
 }
 
-# Route to trigger email
 @app.route('/', methods=['GET'])
 def fetch_and_send_news():
-    # Check for API key in headers
     api_key = request.headers.get('X-API-KEY')
     if api_key != MY_SECRET_API_KEY:
-        abort(403)  # Forbidden if the API key is incorrect
+        abort(403)
 
     news_data = {}
 
-    # Current time and 12 hours ago
     now = datetime.utcnow()
     twelve_hours_ago = now - timedelta(hours=12)
 
-    # Fetch news for each category
     for label, keywords in CATEGORIES.items():
-        # Combine keywords into a single query string
+        # Join keywords with " OR " to ensure the API performs an OR search
         query_string = " OR ".join(keywords)
+        query_string = quote(query_string)  # URL encode
+
         url = (f"https://newsapi.org/v2/everything?"
                f"q={query_string}&"
                f"from={twelve_hours_ago.strftime('%Y-%m-%dT%H:%M:%S')}&"
@@ -49,7 +48,6 @@ def fetch_and_send_news():
                f"sortBy=popularity&"
                f"apiKey={NEWS_API_KEY}")
 
-        # Make the request to News API
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
@@ -61,19 +59,15 @@ def fetch_and_send_news():
                     "published_at": article.get("publishedAt"),
                     "url": article.get("url")
                 }
-                for article in articles[:15]  # Get top 15 popular articles
+                for article in articles[:15]  # Limit to top 15 articles
             ]
         else:
             news_data[label] = []
 
-    # Format email content
     email_content = format_email_content(news_data)
-
-    # Send the email
     send_email("Your Top News Update", email_content)
 
     return jsonify({"message": "Email sent successfully!"})
-
 
 def format_email_content(news_data):
     """Format the news data into HTML for the email."""
@@ -93,11 +87,9 @@ def format_email_content(news_data):
             content += "<p>No articles found for this category.</p>"
     return content
 
-
 def send_email(subject, content):
-    """Send email using SendGrid."""
-    sender_email = SENDER_EMAIL  # Verified email in SendGrid
-    recipient_email = RECIPIENT_EMAIL  # Alias or recipient email
+    sender_email = SENDER_EMAIL
+    recipient_email = RECIPIENT_EMAIL
 
     message = Mail(
         from_email=sender_email,
@@ -110,8 +102,7 @@ def send_email(subject, content):
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         sg.send(message)
     except Exception as e:
-        pass  # Do nothing on errors for now
-
+        pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
