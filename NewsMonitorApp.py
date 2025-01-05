@@ -26,6 +26,14 @@ CATEGORIES = {
 # Route to trigger email
 @app.route('/', methods=['GET'])
 def fetch_and_send_news():
+    print("==> Fetching and sending news...")
+
+    # Log environment variables
+    print(f"NEWS_API_KEY: {'Loaded' if NEWS_API_KEY else 'Not Loaded'}")
+    print(f"SENDGRID_API_KEY: {'Loaded' if SENDGRID_API_KEY else 'Not Loaded'}")
+    print(f"SENDER_EMAIL: {SENDER_EMAIL if SENDER_EMAIL else 'Not Set'}")
+    print(f"RECIPIENT_EMAIL: {RECIPIENT_EMAIL if RECIPIENT_EMAIL else 'Not Set'}")
+
     news_data = {}
 
     for label, category in CATEGORIES.items():
@@ -36,10 +44,14 @@ def fetch_and_send_news():
             # For general categories, use the "top-headlines" endpoint
             url = f"https://newsapi.org/v2/top-headlines?category={category}&country=us&apiKey={NEWS_API_KEY}"
 
+        print(f"Requesting {label} news from {url}")
         response = requests.get(url)
-        print(f"Fetching {label} news: Status code {response.status_code}")
+
         if response.status_code == 200:
+            print(f"Success fetching {label} news: Status code {response.status_code}")
             data = response.json()
+            articles = data.get("articles", [])
+            print(f"Fetched {len(articles)} articles for {label}")
             news_data[label] = [
                 {
                     "title": article.get("title"),
@@ -47,14 +59,16 @@ def fetch_and_send_news():
                     "published_at": article.get("publishedAt"),
                     "url": article.get("url")
                 }
-                for article in data.get("articles", [])[:5]  # Get top 5 articles per category
+                for article in articles[:5]  # Get top 5 articles per category
             ]
         else:
-            print(f"Error fetching {label} news: {response.text}")
+            print(f"Error fetching {label} news: {response.status_code} - {response.text}")
             news_data[label] = []
 
     # Format email content
     email_content = format_email_content(news_data)
+    print("==> Email content formatted:")
+    print(email_content)
 
     # Send the email
     send_email("Your Top News Update", email_content)
@@ -94,14 +108,17 @@ def send_email(subject, content):
     )
 
     try:
-        sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+        print("==> Sending email...")
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
         print(f"Email sent! Status code: {response.status_code}")
         print(f"Response body: {response.body}")
         print(f"Response headers: {response.headers}")
     except Exception as e:
         print(f"Error sending email: {e}")
+        if hasattr(e, 'body'):
+            print(f"Error body: {e.body}")
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
