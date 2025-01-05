@@ -7,15 +7,16 @@ from sendgrid.helpers.mail import Mail
 app = Flask(__name__)
 
 # Environment variables
-NEWS_API_KEY = os.getenv('NEWS_API_KEY')
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
-RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
+NEWS_API_KEY = os.getenv('NEWS_API_KEY')  # News API key
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')  # SendGrid API key
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Verified sender email in SendGrid
+RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')  # Alias or recipient email address
 
 # Categories to pull
 CATEGORIES = {
     "oncology": "cancer",
     "world": "general",
-    "international": "general",  # Added to include both keywords
+    "international": "general",
     "health": "health",
     "science": "science",
     "technology": "technology",
@@ -82,11 +83,11 @@ def format_email_content(news_data):
 
 def send_email(subject, content):
     """Send email using SendGrid."""
-    sender_email = RECIPIENT_EMAIL  # Use the recipient email as the sender email
-    recipient_email = RECIPIENT_EMAIL  # Reuse for sending to yourself
+    sender_email = SENDER_EMAIL  # Verified email in SendGrid
+    recipient_email = RECIPIENT_EMAIL  # Alias or recipient email
 
     message = Mail(
-        from_email=sender_email,  # Sender email (must be verified in SendGrid)
+        from_email=sender_email,
         to_emails=recipient_email,
         subject=subject,
         html_content=content
@@ -97,6 +98,7 @@ def send_email(subject, content):
         response = sg.send(message)
         print(f"Email sent! Status code: {response.status_code}")
         print(f"Response body: {response.body}")
+        print(f"Response headers: {response.headers}")
     except Exception as e:
         print(f"Error sending email: {e}")
 
