@@ -15,14 +15,15 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
-# Refined categories and keywords
+# Simplified categories with single keywords
 CATEGORIES = {
-    "world news": ["world", "international", "global affairs", "geopolitics"],
-    "oncology news": ["oncology", "cancer", "immunotherapy", "cancer treatment"],
-    "health news": ["health", "public health", "health policy", "medical breakthroughs"],
-    "science news": ["science", "space exploration", "scientific discovery", "research"],
-    "technology news": ["technology", "tech news", "gadgets", "cybersecurity"],
-    "artificial intelligence news": ["artificial intelligence", "machine learning", "AI research", "deep learning"]
+    "world news": "world",  # Single word, no need for quotes
+    "New York City news": '"New York City"',  # Double quotes to search as a single phrase
+    "science news": "science",  # Single word
+    "technology news": "technology",  # Single word
+    "artificial intelligence news": '"artificial intelligence"',  # Double quotes for a multi-word phrase
+    "health news": "health",  # Single word
+    "oncology news": "oncology"  # Single word
 }
 
 @app.route('/', methods=['GET'])
@@ -36,19 +37,23 @@ def fetch_and_send_news():
     now = datetime.utcnow()
     twelve_hours_ago = now - timedelta(hours=12)
 
-    for label, keywords in CATEGORIES.items():
-        # Join keywords with " OR " to ensure the API performs an OR search
-        query_string = " OR ".join(keywords)
-        query_string = quote(query_string)  # URL encode
+    for label, keyword in CATEGORIES.items():
+        # URL encode the single keyword
+        query_string = quote(keyword)
 
+        # Construct the News API URL
         url = (f"https://newsapi.org/v2/everything?"
                f"q={query_string}&"
-               f"from={twelve_hours_ago.strftime('%Y-%m-%dT%H:%M:%S')}&"
-               f"to={now.strftime('%Y-%m-%dT%H:%M:%S')}&"
+               f"from={twelve_hours_ago.isoformat()}&"
+               f"to={now.isoformat()}&"
                f"sortBy=popularity&"
                f"apiKey={NEWS_API_KEY}")
 
         response = requests.get(url)
+        print(f"Request URL: {url}")
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Content: {response.text}")
+
         if response.status_code == 200:
             data = response.json()
             articles = data.get("articles", [])
@@ -62,6 +67,7 @@ def fetch_and_send_news():
                 for article in articles[:15]  # Limit to top 15 articles
             ]
         else:
+            print(f"Error for {label}: {response.text}")
             news_data[label] = []
 
     email_content = format_email_content(news_data)
@@ -100,9 +106,10 @@ def send_email(subject, content):
 
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
-        sg.send(message)
+        response = sg.send(message)
+        print(f"Email sent: {response.status_code}")
     except Exception as e:
-        pass
+        print(f"Error sending email: {e}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
