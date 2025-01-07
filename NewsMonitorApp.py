@@ -17,13 +17,13 @@ MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
 # Simplified categories with single keywords
 CATEGORIES = {
-    "world news": "world",  # Single word, no need for quotes
-    "New York City news": '"New York City"',  # Double quotes to search as a single phrase
-    "science news": "science",  # Single word
-    "technology news": "technology",  # Single word
-    "artificial intelligence news": '"artificial intelligence"',  # Double quotes for a multi-word phrase
-    "health news": "health",  # Single word
-    "oncology news": "oncology"  # Single word
+    "world news": "world",
+    "New York City news": '"New York City"',
+    "science news": "science",
+    "technology news": "technology",
+    "artificial intelligence news": '"artificial intelligence"',
+    "health news": "health",
+    "oncology news": "oncology"
 }
 
 @app.route('/', methods=['GET'])
@@ -33,15 +33,11 @@ def fetch_and_send_news():
         abort(403)
 
     news_data = {}
-
     now = datetime.utcnow()
     twelve_hours_ago = now - timedelta(hours=12)
 
     for label, keyword in CATEGORIES.items():
-        # URL encode the single keyword
         query_string = quote(keyword)
-
-        # Construct the News API URL
         url = (f"https://newsapi.org/v2/everything?"
                f"q={query_string}&"
                f"from={twelve_hours_ago.isoformat()}&"
@@ -52,19 +48,19 @@ def fetch_and_send_news():
         response = requests.get(url)
         print(f"Request URL: {url}")
         print(f"Response Status Code: {response.status_code}")
-        print(f"Response Content: {response.text}")
 
         if response.status_code == 200:
             data = response.json()
             articles = data.get("articles", [])
             news_data[label] = [
                 {
-                    "title": article.get("title"),
-                    "source": article["source"].get("name"),
-                    "published_at": article.get("publishedAt"),
-                    "url": article.get("url")
+                    "title": article.get("title", "[No Title]"),
+                    "source": article["source"].get("name", "Unknown Source"),
+                    "published_at": format_datetime(article.get("publishedAt")),
+                    "description": article.get("description", "No Description Available"),
+                    "url": article.get("url", "#")
                 }
-                for article in articles[:15]  # Limit to top 15 articles
+                for article in articles[:15] if article.get("title") and article.get("url") and article.get("title").lower() != "[removed]"
             ]
         else:
             print(f"Error for {label}: {response.text}")
@@ -74,6 +70,15 @@ def fetch_and_send_news():
     send_email("Your Top News Update", email_content)
 
     return jsonify({"message": "Email sent successfully!"})
+
+def format_datetime(iso_datetime):
+    """Convert ISO datetime to a more readable format."""
+    if not iso_datetime:
+        return "Unknown Date"
+    try:
+        return datetime.fromisoformat(iso_datetime.replace('Z', '')).strftime('%B %d, %Y at %I:%M %p')
+    except ValueError:
+        return "Unknown Date"
 
 def format_email_content(news_data):
     """Format the news data into HTML for the email."""
@@ -86,14 +91,17 @@ def format_email_content(news_data):
                 <p>
                     <strong>{article['title']}</strong><br>
                     <em>{article['source']} - {article['published_at']}</em><br>
+                    <p>{article['description']}</p>
                     <a href="{article['url']}">Read more</a>
                 </p>
+                <hr>
                 """
         else:
-            content += "<p>No articles found for this category.</p>"
+            content += "<p>No relevant articles found for this category.</p>"
     return content
 
 def send_email(subject, content):
+    """Send the email using SendGrid."""
     sender_email = SENDER_EMAIL
     recipient_email = RECIPIENT_EMAIL
 
