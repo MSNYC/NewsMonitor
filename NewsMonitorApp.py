@@ -3,8 +3,6 @@ import requests
 from flask import Flask, request, jsonify, abort
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
-from datetime import datetime, timedelta
-from urllib.parse import quote
 
 app = Flask(__name__)
 
@@ -15,15 +13,15 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
-# Simplified categories with single keywords
+# NewsAPI categories
 CATEGORIES = {
-    "world news": "world",
-    "New York City news": '"New York City"',
-    "science news": "science",
-    "technology news": "technology",
-    "artificial intelligence news": '"artificial intelligence"',
+    "business news": "business",
+    "entertainment news": "entertainment",
+    "general news": "general",
     "health news": "health",
-    "oncology news": "oncology"
+    "science news": "science",
+    "sports news": "sports",
+    "technology news": "technology"
 }
 
 @app.route('/', methods=['GET'])
@@ -34,51 +32,37 @@ def fetch_and_send_news():
 
     news_data = {}
 
-    now = datetime.utcnow()
-    twelve_hours_ago = now - timedelta(hours=12)
-
-    for label, keyword in CATEGORIES.items():
-        query_string = quote(keyword)
-
-        # Construct the News API URL
-        url = (f"https://newsapi.org/v2/everything?"
-               f"q={query_string}&"
-               f"from={twelve_hours_ago.isoformat()}&"
-               f"to={now.isoformat()}&"
-               f"sortBy=popularity&"
+    for label, category in CATEGORIES.items():
+        # Construct the News API URL for top headlines
+        url = (f"https://newsapi.org/v2/top-headlines?"
+               f"category={category}&"
+               f"country=us&"
+               f"pageSize=15&"
                f"apiKey={NEWS_API_KEY}")
 
         response = requests.get(url)
         print(f"Request URL: {url}")
         print(f"Response Status Code: {response.status_code}")
+        print(f"Response Content: {response.text}")
 
         if response.status_code == 200:
             data = response.json()
-            print(f"JSON Response for {label}: {data}")  # Debug: full JSON output for each category
-
             articles = data.get("articles", [])
-            print(f"Number of articles retrieved for '{label}': {len(articles)}")  # Log how many articles were found
-
             news_data[label] = [
                 {
-                    "title": article.get("title", "No title"),
-                    "source": article.get("source", {}).get("name", "No source"),
-                    "published_at": article.get("publishedAt", "No date"),
-                    "url": article.get("url", "No URL")
+                    "title": article.get("title"),
+                    "source": article["source"].get("name"),
+                    "published_at": article.get("publishedAt"),
+                    "url": article.get("url"),
+                    "description": article.get("description") or "No description available."
                 }
-                for article in articles[:15]
+                for article in articles[:15]  # Limit to top 15 articles
             ]
-
-            # Debug individual articles to make sure they have content
-            for i, article in enumerate(news_data[label]):
-                print(f"Article {i + 1} for '{label}': {article}")
-
         else:
             print(f"Error for {label}: {response.text}")
             news_data[label] = []
 
     email_content = format_email_content(news_data)
-    print(f"Generated Email Content: {email_content}")  # Debug final email content
     send_email("Your Top News Update", email_content)
 
     return jsonify({"message": "Email sent successfully!"})
@@ -94,6 +78,7 @@ def format_email_content(news_data):
                 <p>
                     <strong>{article['title']}</strong><br>
                     <em>{article['source']} - {article['published_at']}</em><br>
+                    {article['description']}<br>
                     <a href="{article['url']}">Read more</a>
                 </p>
                 """
