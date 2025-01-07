@@ -33,11 +33,14 @@ def fetch_and_send_news():
         abort(403)
 
     news_data = {}
+
     now = datetime.utcnow()
     twelve_hours_ago = now - timedelta(hours=12)
 
     for label, keyword in CATEGORIES.items():
         query_string = quote(keyword)
+
+        # Construct the News API URL
         url = (f"https://newsapi.org/v2/everything?"
                f"q={query_string}&"
                f"from={twelve_hours_ago.isoformat()}&"
@@ -51,34 +54,34 @@ def fetch_and_send_news():
 
         if response.status_code == 200:
             data = response.json()
+            print(f"JSON Response for {label}: {data}")  # Debug: full JSON output for each category
+
             articles = data.get("articles", [])
+            print(f"Number of articles retrieved for '{label}': {len(articles)}")  # Log how many articles were found
+
             news_data[label] = [
                 {
-                    "title": article.get("title", "[No Title]"),
-                    "source": article["source"].get("name", "Unknown Source"),
-                    "published_at": format_datetime(article.get("publishedAt")),
-                    "description": article.get("description", "No Description Available"),
-                    "url": article.get("url", "#")
+                    "title": article.get("title", "No title"),
+                    "source": article.get("source", {}).get("name", "No source"),
+                    "published_at": article.get("publishedAt", "No date"),
+                    "url": article.get("url", "No URL")
                 }
-                for article in articles[:15] if article.get("title") and article.get("url") and article.get("title").lower() != "[removed]"
+                for article in articles[:15]
             ]
+
+            # Debug individual articles to make sure they have content
+            for i, article in enumerate(news_data[label]):
+                print(f"Article {i + 1} for '{label}': {article}")
+
         else:
             print(f"Error for {label}: {response.text}")
             news_data[label] = []
 
     email_content = format_email_content(news_data)
+    print(f"Generated Email Content: {email_content}")  # Debug final email content
     send_email("Your Top News Update", email_content)
 
     return jsonify({"message": "Email sent successfully!"})
-
-def format_datetime(iso_datetime):
-    """Convert ISO datetime to a more readable format."""
-    if not iso_datetime:
-        return "Unknown Date"
-    try:
-        return datetime.fromisoformat(iso_datetime.replace('Z', '')).strftime('%B %d, %Y at %I:%M %p')
-    except ValueError:
-        return "Unknown Date"
 
 def format_email_content(news_data):
     """Format the news data into HTML for the email."""
@@ -91,17 +94,14 @@ def format_email_content(news_data):
                 <p>
                     <strong>{article['title']}</strong><br>
                     <em>{article['source']} - {article['published_at']}</em><br>
-                    <p>{article['description']}</p>
                     <a href="{article['url']}">Read more</a>
                 </p>
-                <hr>
                 """
         else:
-            content += "<p>No relevant articles found for this category.</p>"
+            content += "<p>No articles found for this category.</p>"
     return content
 
 def send_email(subject, content):
-    """Send the email using SendGrid."""
     sender_email = SENDER_EMAIL
     recipient_email = RECIPIENT_EMAIL
 
