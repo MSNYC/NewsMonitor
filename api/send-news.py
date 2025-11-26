@@ -221,6 +221,38 @@ def format_email_content(news_data):
                 padding: 20px;
                 text-align: center;
             }}
+            .toc {{
+                background: #f9fafb;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 30px;
+            }}
+            .toc-title {{
+                font-size: 14px;
+                font-weight: 600;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin: 0 0 12px 0;
+            }}
+            .toc-links {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }}
+            .toc-link {{
+                display: inline-block;
+                text-decoration: none;
+                padding: 8px 14px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                color: white;
+                transition: opacity 0.2s;
+            }}
+            .toc-link:hover {{
+                opacity: 0.8;
+            }}
         </style>
     </head>
     <body>
@@ -230,12 +262,32 @@ def format_email_content(news_data):
                 <p>Top headlines across all major categories</p>
             </div>
             <div class="content">
+                <div class="toc">
+                    <div class="toc-title">Quick Jump to Category:</div>
+                    <div class="toc-links">
     """
 
+    # First pass: Create table of contents
+    for category in news_data.keys():
+        color = category_colors.get(category, "#6b7280")
+        category_id = category.replace(" ", "-").lower()
+        content += f"""
+                        <a href="#{category_id}" class="toc-link" style="background-color: {color};">
+                            {category.title()}
+                        </a>
+        """
+
+    content += """
+                    </div>
+                </div>
+    """
+
+    # Second pass: Create category sections with anchor IDs
     for category, articles in news_data.items():
         color = category_colors.get(category, "#6b7280")
+        category_id = category.replace(" ", "-").lower()
         content += f"""
-            <div class="category">
+            <div class="category" id="{category_id}">
                 <div class="category-header">
                     <span class="category-badge" style="background-color: {color};">
                         {category.upper()}
