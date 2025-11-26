@@ -262,14 +262,14 @@ def format_email_content(news_data):
             }}
         </style>
     </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>📰 Your Daily News Digest</h1>
-                <p>Top headlines across all major categories</p>
+    <body style="background-color: #000000; margin: 0; padding: 20px;">
+        <div class="container" style="background-color: #0a0a0a; border: 1px solid #1f1f1f;">
+            <div class="header" style="background-color: #000000; border-bottom: 2px solid #00ff88;">
+                <h1 style="color: #ffffff;">📰 Your Daily News Digest</h1>
+                <p style="color: #9ca3af;">Top headlines across all major categories</p>
             </div>
-            <div class="content">
-                <div class="toc">
+            <div class="content" style="background-color: #0a0a0a; padding: 24px;">
+                <div class="toc" style="background-color: #0f0f0f; border: 1px solid #1f1f1f;">
                     <div class="toc-title">Quick Jump to Category:</div>
                     <div class="toc-links">
     """
@@ -294,9 +294,9 @@ def format_email_content(news_data):
         color = category_colors.get(category, "#6b7280")
         category_id = category.replace(" ", "-").lower()
         content += f"""
-            <div class="category" id="{category_id}">
-                <div class="category-header">
-                    <span class="category-badge" style="background-color: {color};">
+            <div class="category" id="{category_id}" style="margin-bottom: 40px;">
+                <div class="category-header" style="border-bottom: 1px solid #1f1f1f;">
+                    <span class="category-badge" style="background-color: {color}; color: #000000; padding: 8px 16px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">
                         {category.upper()}
                     </span>
                 </div>
@@ -315,16 +315,16 @@ def format_email_content(news_data):
                         pass
 
                 content += f"""
-                <div class="article-card" style="border-left-color: {color};">
-                    <h3 class="article-title">{article['title']}</h3>
-                    <div class="article-meta">
-                        <span class="source-badge">{article['source']}</span>
+                <div class="article-card" style="background-color: #0f0f0f; border: 1px solid #1a1a1a; border-left: 3px solid {color}; border-radius: 4px; padding: 20px; margin-bottom: 14px;">
+                    <h3 class="article-title" style="color: #ffffff; font-weight: 700; margin: 0 0 10px 0;">{article['title']}</h3>
+                    <div class="article-meta" style="color: #6b7280; margin-bottom: 12px;">
+                        <span class="source-badge" style="background-color: #1a1a1a; border: 1px solid #2a2a2a; padding: 3px 10px; border-radius: 3px; color: #9ca3af;">{article['source']}</span>
                         <span style="margin-left: 8px;">{published_at}</span>
                     </div>
-                    <div class="article-description">
+                    <div class="article-description" style="color: #d1d5db; margin: 12px 0;">
                         {article['description']}
                     </div>
-                    <a href="{article['url']}" class="read-more" style="border-color: {color}; color: {color};">READ FULL STORY</a>
+                    <a href="{article['url']}" class="read-more" style="display: inline-block; background: transparent; border: 2px solid {color}; color: {color}; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 700;">READ FULL STORY</a>
                 </div>
                 """
         else:
@@ -334,7 +334,7 @@ def format_email_content(news_data):
 
     content += """
             </div>
-            <div class="footer">
+            <div class="footer" style="background-color: #000000; border-top: 1px solid #1f1f1f; padding: 24px; color: #6b7280;">
                 <p>You're receiving this because you subscribed to daily news updates.</p>
                 <p>Powered by NewsAPI • Delivered twice daily</p>
             </div>
