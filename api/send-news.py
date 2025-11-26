@@ -262,16 +262,24 @@ def format_email_content(news_data):
             }}
         </style>
     </head>
-    <body style="background-color: #000000; margin: 0; padding: 20px;">
-        <div class="container" style="background-color: #0a0a0a; border: 1px solid #1f1f1f;">
-            <div class="header" style="background-color: #000000; border-bottom: 2px solid #00ff88;">
-                <h1 style="color: #ffffff;">📰 Your Daily News Digest</h1>
-                <p style="color: #9ca3af;">Top headlines across all major categories</p>
-            </div>
-            <div class="content" style="background-color: #0a0a0a; padding: 24px;">
-                <div class="toc" style="background-color: #0f0f0f; border: 1px solid #1f1f1f;">
-                    <div class="toc-title">Quick Jump to Category:</div>
-                    <div class="toc-links">
+    <body bgcolor="#000000" style="background-color: #000000; margin: 0; padding: 0;">
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color: #000000;">
+            <tr>
+                <td align="center" bgcolor="#000000" style="padding: 20px; background-color: #000000;">
+                    <table width="600" border="0" cellpadding="0" cellspacing="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #1f1f1f;">
+                        <tr>
+                            <td bgcolor="#000000" style="background-color: #000000; border-bottom: 2px solid #00ff88; padding: 40px 20px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 900;">📰 Your Daily News Digest</h1>
+                                <p style="color: #9ca3af; margin: 12px 0 0 0;">Top headlines across all major categories</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 24px;">
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#0f0f0f" style="background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 6px; padding: 24px;">
+                                    <tr>
+                                        <td bgcolor="#0f0f0f" style="background-color: #0f0f0f;">
+                                            <div class="toc-title" style="color: #9ca3af; font-weight: 700; text-transform: uppercase; margin-bottom: 16px;">Quick Jump to Category:</div>
+                                            <div class="toc-links">
     """
 
     # First pass: Create table of contents
@@ -285,8 +293,10 @@ def format_email_content(news_data):
         """
 
     content += """
-                    </div>
-                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
     """
 
     # Second pass: Create category sections with anchor IDs
@@ -333,12 +343,18 @@ def format_email_content(news_data):
         content += "</div>"
 
     content += """
-            </div>
-            <div class="footer" style="background-color: #000000; border-top: 1px solid #1f1f1f; padding: 24px; color: #6b7280;">
-                <p>You're receiving this because you subscribed to daily news updates.</p>
-                <p>Powered by NewsAPI • Delivered twice daily</p>
-            </div>
-        </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td bgcolor="#000000" style="background-color: #000000; border-top: 1px solid #1f1f1f; padding: 24px; text-align: center;">
+                                <p style="color: #6b7280; margin: 0; font-size: 11px;">You're receiving this because you subscribed to daily news updates.</p>
+                                <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 11px;">Powered by NewsAPI • Delivered twice daily</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     """
