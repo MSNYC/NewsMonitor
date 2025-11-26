@@ -89,15 +89,15 @@ class handler(BaseHTTPRequestHandler):
 def format_email_content(news_data):
     """Format the news data into a modern, responsive HTML email."""
 
-    # Category colors for visual distinction
+    # Category colors - vibrant, high-contrast for dark theme
     category_colors = {
-        "business news": "#2563eb",
-        "entertainment news": "#dc2626",
-        "general news": "#059669",
-        "health news": "#7c3aed",
-        "science news": "#0891b2",
-        "sports news": "#ea580c",
-        "technology news": "#4f46e5"
+        "business news": "#00ff88",
+        "entertainment news": "#ff0080",
+        "general news": "#00d4ff",
+        "health news": "#a855f7",
+        "science news": "#06b6d4",
+        "sports news": "#f97316",
+        "technology news": "#8b5cf6"
     }
 
     content = f"""
@@ -108,150 +108,157 @@ def format_email_content(news_data):
             body {{
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 line-height: 1.6;
-                color: #1f2937;
-                background-color: #f9fafb;
+                color: #e5e7eb;
+                background-color: #000000;
                 margin: 0;
                 padding: 0;
             }}
             .container {{
                 max-width: 600px;
                 margin: 0 auto;
-                background-color: #ffffff;
+                background-color: #0a0a0a;
+                border: 1px solid #1f1f1f;
             }}
             .header {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: #000000;
+                border-bottom: 2px solid #00ff88;
                 color: white;
-                padding: 30px 20px;
+                padding: 40px 20px;
                 text-align: center;
             }}
             .header h1 {{
                 margin: 0;
-                font-size: 28px;
-                font-weight: 700;
+                font-size: 32px;
+                font-weight: 900;
+                letter-spacing: -1px;
+                color: #ffffff;
             }}
             .header p {{
-                margin: 10px 0 0 0;
-                opacity: 0.9;
+                margin: 12px 0 0 0;
+                color: #9ca3af;
                 font-size: 14px;
+                font-weight: 500;
             }}
             .content {{
-                padding: 20px;
+                padding: 24px;
+                background: #0a0a0a;
             }}
             .category {{
-                margin-bottom: 35px;
+                margin-bottom: 40px;
             }}
             .category-header {{
                 display: flex;
                 align-items: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 2px solid #e5e7eb;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+                border-bottom: 1px solid #1f1f1f;
             }}
             .category-badge {{
                 display: inline-block;
-                padding: 6px 12px;
-                border-radius: 20px;
-                color: white;
-                font-size: 13px;
-                font-weight: 600;
+                padding: 8px 16px;
+                border-radius: 4px;
+                color: #000000;
+                font-size: 12px;
+                font-weight: 700;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
             }}
             .article-card {{
-                background: #f9fafb;
-                border-left: 4px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 12px;
-                transition: all 0.2s;
+                background: #0f0f0f;
+                border: 1px solid #1a1a1a;
+                border-left: 3px solid;
+                border-radius: 4px;
+                padding: 20px;
+                margin-bottom: 14px;
             }}
             .article-title {{
-                font-size: 16px;
-                font-weight: 600;
-                color: #111827;
-                margin: 0 0 8px 0;
-                line-height: 1.4;
+                font-size: 17px;
+                font-weight: 700;
+                color: #ffffff;
+                margin: 0 0 10px 0;
+                line-height: 1.3;
             }}
             .article-meta {{
                 font-size: 13px;
                 color: #6b7280;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
             }}
             .source-badge {{
                 display: inline-block;
-                background: #e5e7eb;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 500;
-                color: #374151;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                padding: 3px 10px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #9ca3af;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
             .article-description {{
                 font-size: 14px;
-                color: #4b5563;
-                margin: 10px 0;
-                line-height: 1.5;
+                color: #d1d5db;
+                margin: 12px 0;
+                line-height: 1.6;
             }}
             .read-more {{
                 display: inline-block;
-                background: #4f46e5;
-                color: white !important;
+                background: transparent;
+                border: 2px solid;
+                color: inherit !important;
                 text-decoration: none;
-                padding: 8px 16px;
-                border-radius: 6px;
+                padding: 10px 20px;
+                border-radius: 4px;
                 font-size: 13px;
-                font-weight: 600;
-                margin-top: 8px;
-                transition: background 0.2s;
-            }}
-            .read-more:hover {{
-                background: #4338ca;
+                font-weight: 700;
+                margin-top: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
             .footer {{
-                background: #f3f4f6;
-                padding: 20px;
+                background: #000000;
+                border-top: 1px solid #1f1f1f;
+                padding: 24px;
                 text-align: center;
-                font-size: 12px;
+                font-size: 11px;
                 color: #6b7280;
-                border-top: 1px solid #e5e7eb;
             }}
             .no-articles {{
-                color: #9ca3af;
+                color: #4b5563;
                 font-style: italic;
                 padding: 20px;
                 text-align: center;
             }}
             .toc {{
-                background: #f9fafb;
-                border-radius: 8px;
-                padding: 20px;
-                margin-bottom: 30px;
+                background: #0f0f0f;
+                border: 1px solid #1f1f1f;
+                border-radius: 6px;
+                padding: 24px;
+                margin-bottom: 32px;
             }}
             .toc-title {{
-                font-size: 14px;
-                font-weight: 600;
-                color: #6b7280;
+                font-size: 13px;
+                font-weight: 700;
+                color: #9ca3af;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin: 0 0 12px 0;
+                letter-spacing: 1px;
+                margin: 0 0 16px 0;
             }}
             .toc-links {{
                 display: flex;
                 flex-wrap: wrap;
-                gap: 8px;
+                gap: 10px;
             }}
             .toc-link {{
                 display: inline-block;
                 text-decoration: none;
-                padding: 8px 14px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 500;
-                color: white;
-                transition: opacity 0.2s;
-            }}
-            .toc-link:hover {{
-                opacity: 0.8;
+                padding: 10px 18px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 700;
+                color: #000000;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
         </style>
     </head>
@@ -308,7 +315,7 @@ def format_email_content(news_data):
                         pass
 
                 content += f"""
-                <div class="article-card">
+                <div class="article-card" style="border-left-color: {color};">
                     <h3 class="article-title">{article['title']}</h3>
                     <div class="article-meta">
                         <span class="source-badge">{article['source']}</span>
@@ -317,7 +324,7 @@ def format_email_content(news_data):
                     <div class="article-description">
                         {article['description']}
                     </div>
-                    <a href="{article['url']}" class="read-more">Read Full Story →</a>
+                    <a href="{article['url']}" class="read-more" style="border-color: {color}; color: {color};">READ FULL STORY</a>
                 </div>
                 """
         else:
@@ -348,8 +355,19 @@ def send_email(subject, content):
     message["From"] = sender_email
     message["To"] = recipient_email
 
-    # Add HTML content
+    # Create plain text version to help avoid spam filters
+    plain_text = """
+Your Daily News Digest
+
+View this email in a browser that supports HTML for the best experience.
+
+To unsubscribe or manage your preferences, reply to this email.
+    """
+
+    # Add both plain text and HTML
+    text_part = MIMEText(plain_text.strip(), "plain")
     html_part = MIMEText(content, "html")
+    message.attach(text_part)
     message.attach(html_part)
 
     try:
