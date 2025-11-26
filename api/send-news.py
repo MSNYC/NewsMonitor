@@ -1,14 +1,15 @@
 import os
 import requests
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 from http.server import BaseHTTPRequestHandler
 import json
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Environment variables
 NEWS_API_KEY = os.getenv('NEWS_API_KEY')
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS')
+GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
@@ -105,19 +106,24 @@ def format_email_content(news_data):
     return content
 
 def send_email(subject, content):
-    sender_email = SENDER_EMAIL
+    sender_email = GMAIL_ADDRESS
     recipient_email = RECIPIENT_EMAIL
 
-    message = Mail(
-        from_email=sender_email,
-        to_emails=recipient_email,
-        subject=subject,
-        html_content=content
-    )
+    # Create message
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = sender_email
+    message["To"] = recipient_email
+
+    # Add HTML content
+    html_part = MIMEText(content, "html")
+    message.attach(html_part)
 
     try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        print(f"Email sent: {response.status_code}")
+        # Connect to Gmail SMTP server
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+            server.sendmail(sender_email, recipient_email, message.as_string())
+            print(f"Email sent successfully to {recipient_email}")
     except Exception as e:
         print(f"Error sending email: {e}")
