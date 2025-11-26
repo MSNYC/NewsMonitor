@@ -5,23 +5,58 @@ import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import feedparser
 
 # Environment variables
-NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS')
 GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 MY_SECRET_API_KEY = os.getenv('MY_SECRET_API_KEY')
 
-# NewsAPI categories
-CATEGORIES = {
-    "business news": "business",
-    "entertainment news": "entertainment",
-    "general news": "general",
-    "health news": "health",
-    "science news": "science",
-    "sports news": "sports",
-    "technology news": "technology"
+# RSS Feed URLs organized by category
+RSS_FEEDS = {
+    "Top News": [
+        "http://rss.cnn.com/rss/cnn_topstories.rss",
+        "http://feeds.bbci.co.uk/news/rss.xml",
+        "https://feeds.npr.org/1001/rss.xml",
+        "http://feeds.reuters.com/reuters/topNews"
+    ],
+    "Technology": [
+        "https://techcrunch.com/feed/",
+        "https://www.theverge.com/rss/index.xml",
+        "https://arstechnica.com/feed/",
+        "https://www.wired.com/feed/rss"
+    ],
+    "AI": [
+        "https://www.technologyreview.com/topic/artificial-intelligence/feed",
+        "https://venturebeat.com/category/ai/feed/",
+        "https://www.artificialintelligence-news.com/feed/",
+        "https://www.marktechpost.com/feed/"
+    ],
+    "Arts and Entertainment": [
+        "http://rss.cnn.com/rss/cnn_showbiz.rss",
+        "https://variety.com/feed/",
+        "https://www.hollywoodreporter.com/feed/",
+        "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"
+    ],
+    "Science": [
+        "https://www.sciencedaily.com/rss/all.xml",
+        "https://www.scientificamerican.com/feed/",
+        "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+        "https://phys.org/rss-feed/"
+    ],
+    "Health": [
+        "https://www.medicalnewstoday.com/rss",
+        "https://www.healthline.com/rss",
+        "http://rss.cnn.com/rss/cnn_health.rss",
+        "http://feeds.bbci.co.uk/news/health/rss.xml"
+    ],
+    "Business": [
+        "https://feeds.bloomberg.com/markets/news.rss",
+        "http://rss.cnn.com/rss/money_latest.rss",
+        "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "http://feeds.bbci.co.uk/news/business/rss.xml"
+    ]
 }
 
 class handler(BaseHTTPRequestHandler):
@@ -39,36 +74,50 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # Fetch news data
+            # Fetch news data from RSS feeds
             news_data = {}
 
-            for label, category in CATEGORIES.items():
-                url = (f"https://newsapi.org/v2/top-headlines?"
-                       f"category={category}&"
-                       f"country=us&"
-                       f"pageSize=15&"
-                       f"apiKey={NEWS_API_KEY}")
+            for category, feed_urls in RSS_FEEDS.items():
+                print(f"Fetching {category}...")
+                articles = []
 
-                response = requests.get(url)
-                print(f"Request URL: {url}")
-                print(f"Response Status Code: {response.status_code}")
+                # Fetch from each RSS feed in the category
+                for feed_url in feed_urls:
+                    try:
+                        print(f"  Parsing feed: {feed_url}")
+                        feed = feedparser.parse(feed_url)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    articles = data.get("articles", [])
-                    news_data[label] = [
-                        {
-                            "title": article.get("title"),
-                            "source": article["source"].get("name"),
-                            "published_at": article.get("publishedAt"),
-                            "url": article.get("url"),
-                            "description": article.get("description") or "No description available."
-                        }
-                        for article in articles[:15]
-                    ]
-                else:
-                    print(f"Error for {label}: {response.text}")
-                    news_data[label] = []
+                        for entry in feed.entries[:5]:  # Get top 5 from each feed
+                            # Extract article data
+                            title = entry.get('title', 'No title')
+                            description = entry.get('summary', entry.get('description', 'No description available.'))
+
+                            # Clean up description (remove HTML tags if present)
+                            import re
+                            description = re.sub('<[^<]+?>', '', description)
+                            description = description.strip()[:300]  # Limit length
+
+                            published = entry.get('published', entry.get('updated', ''))
+                            link = entry.get('link', '')
+
+                            # Extract source name from feed
+                            source = feed.feed.get('title', 'Unknown Source')
+
+                            articles.append({
+                                "title": title,
+                                "source": source,
+                                "published_at": published,
+                                "url": link,
+                                "description": description if description else "No description available."
+                            })
+
+                    except Exception as e:
+                        print(f"  Error parsing {feed_url}: {str(e)}")
+                        continue
+
+                # Take top 15 articles for this category
+                news_data[category] = articles[:15]
+                print(f"  Found {len(articles)} articles for {category}")
 
             # Format and send email
             email_content = format_email_content(news_data)
@@ -91,13 +140,13 @@ def format_email_content(news_data):
 
     # Category colors - vibrant, high-contrast for dark theme
     category_colors = {
-        "business news": "#00ff88",
-        "entertainment news": "#ff0080",
-        "general news": "#00d4ff",
-        "health news": "#a855f7",
-        "science news": "#06b6d4",
-        "sports news": "#f97316",
-        "technology news": "#8b5cf6"
+        "Top News": "#00d4ff",          # Electric blue
+        "Technology": "#8b5cf6",         # Violet
+        "AI": "#ff0080",                 # Hot magenta
+        "Arts and Entertainment": "#f97316",  # Orange
+        "Science": "#00ff88",            # Bright cyan/green
+        "Health": "#a855f7",             # Purple
+        "Business": "#06b6d4"            # Cyan
     }
 
     content = f"""
