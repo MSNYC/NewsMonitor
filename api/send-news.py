@@ -104,7 +104,12 @@ def format_email_content(news_data):
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="dark">
+        <meta name="supported-color-schemes" content="dark">
         <style>
+            :root {{
+                color-scheme: dark;
+            }}
             body {{
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 line-height: 1.6;
@@ -262,11 +267,11 @@ def format_email_content(news_data):
             }}
         </style>
     </head>
-    <body bgcolor="#000000" style="background-color: #000000; margin: 0; padding: 0;">
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color: #000000;">
+    <body bgcolor="#000000" style="background-color: #000000 !important; margin: 0; padding: 0;">
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#000000" style="background-color: #000000 !important;">
             <tr>
-                <td align="center" bgcolor="#000000" style="padding: 20px; background-color: #000000;">
-                    <table width="600" border="0" cellpadding="0" cellspacing="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border: 1px solid #1f1f1f;">
+                <td align="center" bgcolor="#000000" style="padding: 10px; background-color: #000000 !important;">
+                    <table width="100%" style="max-width: 600px;" border="0" cellpadding="0" cellspacing="0" bgcolor="#0a0a0a" style="background-color: #0a0a0a !important; border: 1px solid #1f1f1f;">
                         <tr>
                             <td bgcolor="#000000" style="background-color: #000000; border-bottom: 2px solid #00ff88; padding: 40px 20px; text-align: center;">
                                 <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 900;">📰 Your Daily News Digest</h1>
