@@ -75,7 +75,19 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             # Fetch news data from RSS feeds
+            from datetime import datetime, timedelta
+            import time as time_module
+
             news_data = {}
+            feed_stats = {
+                'total_feeds': 0,
+                'successful_feeds': 0,
+                'failed_feeds': [],
+                'total_articles': 0
+            }
+
+            # Only include articles from last 7 days
+            cutoff_date = datetime.now() - timedelta(days=7)
 
             for category, feed_urls in RSS_FEEDS.items():
                 print(f"Fetching {category}...")
@@ -83,11 +95,32 @@ class handler(BaseHTTPRequestHandler):
 
                 # Fetch from each RSS feed in the category
                 for feed_url in feed_urls:
+                    feed_stats['total_feeds'] += 1
                     try:
                         print(f"  Parsing feed: {feed_url}")
                         feed = feedparser.parse(feed_url)
 
                         for entry in feed.entries[:5]:  # Get top 5 from each feed
+                            # Check article date - skip old articles
+                            published = entry.get('published', entry.get('updated', ''))
+
+                            # Parse the date
+                            article_date = None
+                            if published:
+                                try:
+                                    # Try parsing with feedparser's time
+                                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                                        article_date = datetime(*entry.published_parsed[:6])
+                                    elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                                        article_date = datetime(*entry.updated_parsed[:6])
+                                except:
+                                    pass
+
+                            # Skip articles older than 7 days
+                            if article_date and article_date < cutoff_date:
+                                print(f"    Skipping old article from {article_date.strftime('%Y-%m-%d')}")
+                                continue
+
                             # Extract article data
                             title = entry.get('title', 'No title')
                             description = entry.get('summary', entry.get('description', 'No description available.'))
@@ -97,7 +130,6 @@ class handler(BaseHTTPRequestHandler):
                             description = re.sub('<[^<]+?>', '', description)
                             description = description.strip()[:300]  # Limit length
 
-                            published = entry.get('published', entry.get('updated', ''))
                             link = entry.get('link', '')
 
                             # Extract source name from feed
@@ -111,16 +143,24 @@ class handler(BaseHTTPRequestHandler):
                                 "description": description if description else "No description available."
                             })
 
+                        feed_stats['successful_feeds'] += 1
+
                     except Exception as e:
                         print(f"  Error parsing {feed_url}: {str(e)}")
+                        feed_stats['failed_feeds'].append({
+                            'url': feed_url,
+                            'error': str(e),
+                            'category': category
+                        })
                         continue
 
                 # Take top 15 articles for this category
                 news_data[category] = articles[:15]
+                feed_stats['total_articles'] += len(articles[:15])
                 print(f"  Found {len(articles)} articles for {category}")
 
-            # Format and send email
-            email_content = format_email_content(news_data)
+            # Format and send email with stats
+            email_content = format_email_content(news_data, feed_stats)
             send_email("Your Top News Update", email_content)
 
             self.send_response(200)
@@ -135,8 +175,12 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
-def format_email_content(news_data):
+def format_email_content(news_data, feed_stats=None):
     """Format the news data into a modern, responsive HTML email."""
+
+    # Default stats if not provided
+    if feed_stats is None:
+        feed_stats = {'total_feeds': 0, 'successful_feeds': 0, 'failed_feeds': [], 'total_articles': 0}
 
     # Category colors - vibrant, high-contrast for dark theme
     category_colors = {
@@ -314,6 +358,46 @@ def format_email_content(news_data):
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }}
+            .alert-banner {{
+                background: #1a1a1a;
+                border-left: 4px solid #f97316;
+                padding: 12px 16px;
+                margin: 16px 24px;
+                border-radius: 4px;
+            }}
+            .alert-banner-text {{
+                color: #f97316;
+                font-size: 13px;
+                font-weight: 600;
+                margin: 0;
+            }}
+            .stats-dashboard {{
+                background: #0a0a0a;
+                border: 1px solid #1f1f1f;
+                border-radius: 4px;
+                padding: 16px;
+                margin: 16px 0 0 0;
+                font-size: 11px;
+            }}
+            .stats-title {{
+                color: #6b7280;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin: 0 0 8px 0;
+                font-size: 10px;
+            }}
+            .stats-row {{
+                color: #9ca3af;
+                margin: 4px 0;
+                font-size: 11px;
+            }}
+            .stats-success {{
+                color: #00ff88;
+            }}
+            .stats-error {{
+                color: #ff0080;
+            }}
         </style>
     </head>
     <body bgcolor="#000000" style="background-color: #000000 !important; margin: 0; padding: 0;">
@@ -326,7 +410,23 @@ def format_email_content(news_data):
                                 <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 900;">📰 Your Daily News Digest</h1>
                                 <p style="color: #9ca3af; margin: 12px 0 0 0;">Top headlines across all major categories</p>
                             </td>
-                        </tr>
+                        </tr>"""
+
+    # Add alert banner if any feeds failed
+    if feed_stats['failed_feeds']:
+        failed_count = len(feed_stats['failed_feeds'])
+        content += f"""
+                        <tr>
+                            <td bgcolor="#0a0a0a" style="background-color: #0a0a0a;">
+                                <div class="alert-banner" style="background: #1a1a1a; border-left: 4px solid #f97316; padding: 12px 16px; margin: 16px 24px; border-radius: 4px;">
+                                    <p class="alert-banner-text" style="color: #f97316; font-size: 13px; font-weight: 600; margin: 0;">
+                                        ⚠️ {failed_count} news feed{"s" if failed_count > 1 else ""} temporarily unavailable
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>"""
+
+    content += """
                         <tr>
                             <td bgcolor="#0a0a0a" style="background-color: #0a0a0a; padding: 24px;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#0f0f0f" style="background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 6px; padding: 24px;">
@@ -396,13 +496,28 @@ def format_email_content(news_data):
 
         content += "</div>"
 
-    content += """
+    # Build stats dashboard
+    success_rate = (feed_stats['successful_feeds'] / feed_stats['total_feeds'] * 100) if feed_stats['total_feeds'] > 0 else 0
+
+    content += f"""
                             </td>
                         </tr>
                         <tr>
                             <td bgcolor="#000000" style="background-color: #000000; border-top: 1px solid #1f1f1f; padding: 24px; text-align: center;">
                                 <p style="color: #6b7280; margin: 0; font-size: 11px;">You're receiving this because you subscribed to daily news updates.</p>
-                                <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 11px;">Powered by NewsAPI • Delivered twice daily</p>
+                                <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 11px;">Delivered via RSS feeds • Twice daily</p>
+
+                                <div class="stats-dashboard" style="background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 4px; padding: 16px; margin: 16px 0 0 0;">
+                                    <div class="stats-title" style="color: #6b7280; font-weight: 700; text-transform: uppercase; font-size: 10px; margin-bottom: 8px;">Feed Status</div>
+                                    <div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">
+                                        Articles: <span class="stats-success" style="color: #00ff88;">{feed_stats['total_articles']}</span>
+                                    </div>
+                                    <div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">
+                                        Feeds: <span class="stats-success" style="color: #00ff88;">{feed_stats['successful_feeds']}</span>/{feed_stats['total_feeds']}
+                                        ({success_rate:.0f}%)
+                                    </div>
+                                    {f'<div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">Failed: <span class="stats-error" style="color: #ff0080;">{len(feed_stats["failed_feeds"])}</span></div>' if feed_stats['failed_feeds'] else ''}
+                                </div>
                             </td>
                         </tr>
                     </table>
