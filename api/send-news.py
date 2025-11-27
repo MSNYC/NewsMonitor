@@ -6,6 +6,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import feedparser
+from pathlib import Path
+from datetime import datetime, timedelta
+import hashlib
 
 # Environment variables
 GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS')
@@ -19,45 +22,140 @@ RSS_FEEDS = {
         "http://rss.cnn.com/rss/cnn_topstories.rss",
         "http://feeds.bbci.co.uk/news/rss.xml",
         "https://feeds.npr.org/1001/rss.xml",
-        "http://feeds.reuters.com/reuters/topNews"
+        "http://feeds.reuters.com/reuters/topNews",
+        "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+        "https://www.theguardian.com/world/rss",
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://feeds.washingtonpost.com/rss/national"
     ],
     "Technology": [
         "https://techcrunch.com/feed/",
         "https://www.theverge.com/rss/index.xml",
         "https://arstechnica.com/feed/",
-        "https://www.wired.com/feed/rss"
+        "https://www.wired.com/feed/rss",
+        "https://www.engadget.com/rss.xml",
+        "https://www.cnet.com/rss/news/",
+        "https://www.zdnet.com/news/rss.xml",
+        "https://www.techmeme.com/feed.xml"
     ],
     "AI": [
         "https://www.technologyreview.com/topic/artificial-intelligence/feed",
         "https://venturebeat.com/category/ai/feed/",
         "https://www.artificialintelligence-news.com/feed/",
-        "https://www.marktechpost.com/feed/"
+        "https://www.marktechpost.com/feed/",
+        "https://deepmind.google/blog/rss.xml",
+        "https://openai.com/blog/rss/",
+        "https://ai.googleblog.com/feeds/posts/default"
     ],
     "Arts and Entertainment": [
         "http://rss.cnn.com/rss/cnn_showbiz.rss",
         "https://variety.com/feed/",
         "https://www.hollywoodreporter.com/feed/",
-        "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"
+        "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+        "https://deadline.com/feed/",
+        "https://ew.com/feed/",
+        "https://www.rollingstone.com/feed/"
     ],
     "Science": [
         "https://www.sciencedaily.com/rss/all.xml",
         "https://www.scientificamerican.com/feed/",
         "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
-        "https://phys.org/rss-feed/"
+        "https://phys.org/rss-feed/",
+        "https://www.nature.com/nature.rss",
+        "https://www.space.com/feeds/all",
+        "https://www.newscientist.com/feed/home"
     ],
     "Health": [
         "https://www.medicalnewstoday.com/rss",
         "https://www.healthline.com/rss",
         "http://rss.cnn.com/rss/cnn_health.rss",
-        "http://feeds.bbci.co.uk/news/health/rss.xml"
+        "http://feeds.bbci.co.uk/news/health/rss.xml",
+        "https://www.health.com/syndication/feed",
+        "https://www.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC",
+        "https://www.nih.gov/news-events/news-releases/rss"
     ],
     "Business": [
         "https://feeds.bloomberg.com/markets/news.rss",
         "http://rss.cnn.com/rss/money_latest.rss",
         "https://www.cnbc.com/id/100003114/device/rss/rss.html",
-        "http://feeds.bbci.co.uk/news/business/rss.xml"
+        "http://feeds.bbci.co.uk/news/business/rss.xml",
+        "https://www.ft.com/?format=rss",
+        "https://www.wsj.com/xml/rss/3_7085.xml",
+        "https://www.marketwatch.com/rss/topstories",
+        "https://www.forbes.com/business/feed/"
     ]
 }
+
+# File to store sent articles history
+SENT_ARTICLES_FILE = Path("/tmp/sent_articles.json")
+
+def load_sent_articles():
+    """Load the history of sent articles from file."""
+    try:
+        if SENT_ARTICLES_FILE.exists():
+            with open(SENT_ARTICLES_FILE, 'r') as f:
+                data = json.load(f)
+                # Clean up old entries (older than 30 days)
+                cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
+                data['articles'] = {
+                    url: timestamp for url, timestamp in data.get('articles', {}).items()
+                    if timestamp > cutoff_date
+                }
+                return data
+    except Exception as e:
+        print(f"Error loading sent articles: {e}")
+
+    return {'articles': {}, 'last_updated': datetime.now().isoformat()}
+
+def save_sent_articles(sent_articles):
+    """Save the history of sent articles to file."""
+    try:
+        sent_articles['last_updated'] = datetime.now().isoformat()
+        SENT_ARTICLES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(SENT_ARTICLES_FILE, 'w') as f:
+            json.dump(sent_articles, f, indent=2)
+        print(f"Saved {len(sent_articles['articles'])} article URLs to history")
+    except Exception as e:
+        print(f"Error saving sent articles: {e}")
+
+def get_article_hash(article):
+    """Generate a unique hash for an article based on URL or title."""
+    # Use URL as primary identifier, fallback to title
+    identifier = article.get('url', '') or article.get('title', '')
+    return hashlib.md5(identifier.encode()).hexdigest()
+
+def deduplicate_articles(articles, sent_articles_history):
+    """Remove duplicate articles and filter out previously sent ones."""
+    seen_urls = set()
+    seen_hashes = set()
+    deduplicated = []
+
+    for article in articles:
+        url = article.get('url', '')
+        article_hash = get_article_hash(article)
+
+        # Skip if we've seen this URL in current batch
+        if url and url in seen_urls:
+            print(f"  Skipping duplicate in current batch: {article.get('title', 'No title')[:50]}")
+            continue
+
+        # Skip if we've seen this article hash in current batch
+        if article_hash in seen_hashes:
+            print(f"  Skipping duplicate by hash: {article.get('title', 'No title')[:50]}")
+            continue
+
+        # Skip if we've sent this article before (within last 30 days)
+        if url and url in sent_articles_history.get('articles', {}):
+            print(f"  Skipping previously sent: {article.get('title', 'No title')[:50]}")
+            continue
+
+        # This is a new, unique article
+        if url:
+            seen_urls.add(url)
+        seen_hashes.add(article_hash)
+        deduplicated.append(article)
+
+    return deduplicated
 
 class handler(BaseHTTPRequestHandler):
     """Vercel serverless function handler"""
@@ -74,8 +172,11 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
+            # Load history of sent articles
+            sent_articles_history = load_sent_articles()
+            new_articles_sent = []
+
             # Fetch news data from RSS feeds
-            from datetime import datetime, timedelta
             import time as time_module
 
             news_data = {}
@@ -83,7 +184,9 @@ class handler(BaseHTTPRequestHandler):
                 'total_feeds': 0,
                 'successful_feeds': 0,
                 'failed_feeds': [],
-                'total_articles': 0
+                'total_articles': 0,
+                'duplicates_removed': 0,
+                'previously_sent': 0
             }
 
             # Only include articles from last 7 days
@@ -154,19 +257,52 @@ class handler(BaseHTTPRequestHandler):
                         })
                         continue
 
-                # Take top 15 articles for this category
-                news_data[category] = articles[:15]
-                feed_stats['total_articles'] += len(articles[:15])
-                print(f"  Found {len(articles)} articles for {category}")
+                # Deduplicate articles before limiting
+                original_count = len(articles)
+                articles = deduplicate_articles(articles, sent_articles_history)
+                duplicates_removed = original_count - len(articles)
+                feed_stats['duplicates_removed'] += duplicates_removed
+
+                if duplicates_removed > 0:
+                    print(f"  Removed {duplicates_removed} duplicate/previously-sent articles")
+
+                # Take top 15 unique articles for this category
+                unique_articles = articles[:15]
+                news_data[category] = unique_articles
+                feed_stats['total_articles'] += len(unique_articles)
+
+                # Track new articles for saving to history
+                for article in unique_articles:
+                    if article.get('url'):
+                        new_articles_sent.append(article['url'])
+
+                print(f"  Found {len(unique_articles)} unique articles for {category}")
 
             # Format and send email with stats
             email_content = format_email_content(news_data, feed_stats)
             send_email("Your Top News Update", email_content)
 
+            # Save sent articles to history to prevent future duplicates
+            for url in new_articles_sent:
+                sent_articles_history['articles'][url] = datetime.now().isoformat()
+            save_sent_articles(sent_articles_history)
+
+            print(f"Total articles sent: {len(new_articles_sent)}")
+            print(f"Total duplicates removed: {feed_stats['duplicates_removed']}")
+
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({"message": "Email sent successfully!"}).encode())
+            response_data = {
+                "message": "Email sent successfully!",
+                "stats": {
+                    "articles_sent": len(new_articles_sent),
+                    "duplicates_removed": feed_stats['duplicates_removed'],
+                    "total_feeds": feed_stats['total_feeds'],
+                    "successful_feeds": feed_stats['successful_feeds']
+                }
+            }
+            self.wfile.write(json.dumps(response_data).encode())
 
         except Exception as e:
             print(f"Error in handler: {str(e)}")
@@ -510,13 +646,14 @@ def format_email_content(news_data, feed_stats=None):
                                 <div class="stats-dashboard" style="background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 4px; padding: 16px; margin: 16px 0 0 0;">
                                     <div class="stats-title" style="color: #6b7280; font-weight: 700; text-transform: uppercase; font-size: 10px; margin-bottom: 8px;">Feed Status</div>
                                     <div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">
-                                        Articles: <span class="stats-success" style="color: #00ff88;">{feed_stats['total_articles']}</span>
+                                        Unique Articles: <span class="stats-success" style="color: #00ff88;">{feed_stats['total_articles']}</span>
                                     </div>
                                     <div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">
                                         Feeds: <span class="stats-success" style="color: #00ff88;">{feed_stats['successful_feeds']}</span>/{feed_stats['total_feeds']}
                                         ({success_rate:.0f}%)
                                     </div>
-                                    {f'<div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">Failed: <span class="stats-error" style="color: #ff0080;">{len(feed_stats["failed_feeds"])}</span></div>' if feed_stats['failed_feeds'] else ''}
+                                    {f'<div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">Duplicates Removed: <span style="color: #8b5cf6;">{feed_stats["duplicates_removed"]}</span></div>' if feed_stats.get('duplicates_removed', 0) > 0 else ''}
+                                    {f'<div class="stats-row" style="color: #9ca3af; margin: 4px 0; font-size: 11px;">Failed Feeds: <span class="stats-error" style="color: #ff0080;">{len(feed_stats["failed_feeds"])}</span></div>' if feed_stats['failed_feeds'] else ''}
                                 </div>
                             </td>
                         </tr>

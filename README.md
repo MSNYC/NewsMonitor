@@ -4,10 +4,11 @@ Automated news digest delivery system that aggregates breaking news from multipl
 
 ## Features
 
-- 📰 **Real-time news** from 28+ RSS feeds across 7 categories
+- 📰 **Real-time news** from 50+ RSS feeds across 7 categories
+- 🎯 **Smart deduplication** - prevents repeated articles across emails
 - 🌑 **Dark-themed, mobile-responsive** email design
-- 🎯 **Quick-jump navigation** with color-coded category links
-- 📊 **Feed health monitoring** with automatic alerts
+- 🔗 **Quick-jump navigation** with color-coded category links
+- 📊 **Feed health monitoring** with automatic alerts and stats
 - ⏰ **Automated delivery** via GitHub Actions (8 AM & 8 PM ET)
 - 🔒 **Secure** - all credentials stored as environment variables
 - 💰 **100% free** - no paid services required
@@ -23,13 +24,13 @@ Automated news digest delivery system that aggregates breaking news from multipl
 
 ## News Categories
 
-1. **Top News** - CNN, BBC, NPR, Reuters
-2. **Technology** - TechCrunch, The Verge, Ars Technica, Wired
-3. **AI** - MIT Tech Review, VentureBeat, AI News
-4. **Arts & Entertainment** - Variety, Hollywood Reporter, CNN Entertainment
-5. **Science** - ScienceDaily, Scientific American, BBC Science
-6. **Health** - Medical News Today, Healthline, CNN Health
-7. **Business** - Bloomberg, CNBC, CNN Money, BBC Business
+1. **Top News** - CNN, BBC, NPR, Reuters, NY Times, The Guardian, Al Jazeera, Washington Post
+2. **Technology** - TechCrunch, The Verge, Ars Technica, Wired, Engadget, CNET, ZDNet, Techmeme
+3. **AI** - MIT Tech Review, VentureBeat, AI News, MarTechPost, DeepMind, OpenAI, Google AI
+4. **Arts & Entertainment** - Variety, Hollywood Reporter, CNN, BBC, Deadline, EW, Rolling Stone
+5. **Science** - ScienceDaily, Scientific American, BBC, Phys.org, Nature, Space.com, New Scientist
+6. **Health** - Medical News Today, Healthline, CNN Health, BBC Health, WebMD, NIH
+7. **Business** - Bloomberg, CNBC, CNN Money, BBC Business, FT, WSJ, MarketWatch, Forbes
 
 ## Prerequisites
 
@@ -131,10 +132,17 @@ cutoff_date = datetime.now() - timedelta(days=7)  # Last 7 days
 - High-contrast vibrant colors
 - Optimized for Apple Mail and Gmail
 
+### Smart Deduplication
+- Tracks sent articles for 30 days to prevent repeats
+- Removes duplicates within each email batch
+- Uses URL and content-based hashing for accuracy
+- Shows deduplication stats in email footer
+
 ### Quality Monitoring
 - Feed health dashboard at bottom
 - Conditional alert banner if feeds fail
 - Article count and success rate displayed
+- Duplicate removal statistics
 
 ### Responsive Design
 - Mobile-optimized layout
@@ -189,6 +197,13 @@ cutoff_date = datetime.now() - timedelta(days=7)  # Last 7 days
 - Check Vercel function logs for RSS feed errors
 - Some feeds may be temporarily down
 - Look for feed health stats at bottom of email
+
+### Repeated articles appearing?
+
+- Deduplication system tracks articles for 30 days
+- History is stored in `/tmp/sent_articles.json` on Vercel
+- If running locally, history resets between sessions
+- Check email footer for "Duplicates Removed" count
 
 ### Old articles appearing?
 
