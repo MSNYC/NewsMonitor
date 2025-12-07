@@ -235,6 +235,11 @@ class handler(BaseHTTPRequestHandler):
 
                             link = entry.get('link', '')
 
+                            # Skip articles without a valid URL (can't be deduplicated)
+                            if not link:
+                                print(f"    Skipping article without URL: {title[:50]}")
+                                continue
+
                             # Extract source name from feed
                             source = feed.feed.get('title', 'Unknown Source')
 
