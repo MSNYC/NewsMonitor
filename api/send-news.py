@@ -219,8 +219,11 @@ class handler(BaseHTTPRequestHandler):
                                 except:
                                     pass
 
-                            # Skip articles older than 7 days
-                            if article_date and article_date < cutoff_date:
+                            # Skip articles without a date or older than 7 days
+                            if not article_date:
+                                print(f"    Skipping article without valid date: {title[:50]}")
+                                continue
+                            if article_date < cutoff_date:
                                 print(f"    Skipping old article from {article_date.strftime('%Y-%m-%d')}")
                                 continue
 
